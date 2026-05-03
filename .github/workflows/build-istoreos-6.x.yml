@@ -11,7 +11,7 @@ on:
         type: choice
         options:
           - ''
-          - 'rk3399-emb-3531'
+          - 'rk3399_emb-3531'
           - 'friendlyarm_nanopi-r2s'
           - 'friendlyarm_nanopi-r3s'
           - 'friendlyarm_nanopi-r4s'
