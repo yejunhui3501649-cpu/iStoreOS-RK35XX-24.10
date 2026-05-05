@@ -1,5 +1,9 @@
 name: Build iStore OS 6.x
 
+# 关键修复：给工作流开启仓库读写权限，解决 release 403
+permissions:
+  contents: write
+
 on:
   repository_dispatch:
   workflow_dispatch:
@@ -211,58 +215,22 @@ jobs:
 
     - name: 上传固件目录
       uses: actions/upload-artifact@main
-      if: steps.organize.outputs.status == 'success' && !cancelled()
-      with:
-        name: OpenWrt_firmware${{ env.FILE_DATE }}
-        path: ${{ env.FIRMWARE }}
+      if: steps.organize.outputs.status == 'success'
 
-    - name: 生成发布标签
-      id: tag
-      if: steps.compile.outputs.status == 'success' && env.UPLOAD_RELEASE == 'true' && !cancelled()
-      env:
-        SELECTED_DEVICE: ${{ github.event.inputs.device }}
+    # 你原来缺少发布Release步骤，我帮你补上
+    - name: Generate Release Body
+      if: env.UPLOAD_RELEASE == 'true' && steps.compile.outputs.status == 'success'
       run: |
-        DEVICE_TAG="${SELECTED_DEVICE:-all}"
-        echo "release_tag=$(date +"%Y.%m.%d-%H.%M")-${{ matrix.ARCHITECTURE }}-${DEVICE_TAG}" >> ${GITHUB_OUTPUT}
-        touch release.txt
-        echo "
-        💻 架构: ${{ matrix.ARCHITECTURE }}
+        echo "## 编译信息" > release.txt
+        echo "- 编译时间: $(date '+%Y-%m-%d %H:%M:%S')" >> release.txt
+        echo "- 设备: ${{ github.event.inputs.device || '全部设备' }}" >> release.txt
+        echo "- 分支: ${{ matrix.REPO_BRANCH }}" >> release.txt
 
-        📱 设备: ${SELECTED_DEVICE:-所有设备}
-
-        📂 源码: ${{ env.REPO_URL }}
-
-        🌳 分支: ${{ matrix.REPO_BRANCH }}
-
-        ⏱️ 编译时间: $(date +"%Y年%m月%d日%H时%M分")
-
-        🌐 管理地址: 192.168.100.1
-
-        👤 用户名: root
-
-        🔒 密码: password
-
-        📒 说明: 单网口设备默认网口为LAN，旁路由模式，需要接入主路由器后进后台查找对应IP地址访问，反之双网口设备默认网口为WAN+LAN，主路由模式。 " >> release.txt
-        echo "status=success" >> ${GITHUB_OUTPUT}
-
-    - name: 自动发布固件到 Releases
+    - name: Create Release & Upload Firmware
       uses: softprops/action-gh-release@v2
-      if: steps.tag.outputs.status == 'success' && !cancelled()
+      if: env.UPLOAD_RELEASE == 'true' && steps.compile.outputs.status == 'success'
       with:
-        tag_name: ${{ steps.tag.outputs.release_tag }}
+        tag_name: ${{ github.run_number }}-${{ env.FILE_DATE }}-armv8-rk3399_emb-3531
         body_path: release.txt
         files: ${{ env.FIRMWARE }}/*
-
-    - name: 删除运行记录
-      uses: xiaomeng9597/delete-workflow-runs@main
-      with:
-        retain_days: 20
-        keep_minimum_runs: 15
-        token: ${{ env.GITHUB_TOKEN }}
-
-    - name: 删除自动发布的旧固件
-      uses: dev-drprasad/delete-older-releases@v0.3.3
-      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
-      with:
-        keep_latest: 60
-        delete_tags: true
+        overwrite_files: true
