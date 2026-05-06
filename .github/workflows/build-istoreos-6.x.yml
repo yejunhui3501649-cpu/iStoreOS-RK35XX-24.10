@@ -42,6 +42,10 @@ on:
   schedule:
    - cron: 0 16 * * *
 
+permissions:
+  contents: write
+  pull-requests: read
+
 env:
   REPO_URL: https://github.com/yejunhui3501649-cpu/istoreos
   FEEDS_CONF: feeds.conf
@@ -252,6 +256,8 @@ jobs:
         tag_name: ${{ steps.tag.outputs.release_tag }}
         body_path: release.txt
         files: ${{ env.FIRMWARE }}/*
+        overwrite_files: true
+        token: ${{ env.GITHUB_TOKEN }}
 
     - name: 删除运行记录
       uses: xiaomeng9597/delete-workflow-runs@main
