@@ -7,7 +7,7 @@ on:
       device:
         description: '选择要编译的设备 (留空则编译所有设备)'
         required: false
-        default: ''
+        default: 'rk3399_emb-3531'
         type: choice
         options:
           - ''
@@ -157,7 +157,7 @@ jobs:
     - name: 加载自定义配置
       env:
         CONFIG_FILE_PATH: ${{ matrix.ARCHITECTURE }}/${{ env.CONFIG_FILE }}
-        SELECTED_DEVICE: ${{ github.event.inputs.device }}
+        SELECTED_DEVICE: ${{ github.event.inputs.device || 'rk3399_emb-3531' }}
       run: |
         [ -e files ] && mv files openwrt/files
         [ -e $CONFIG_FILE_PATH ] && mv $CONFIG_FILE_PATH openwrt/$CONFIG_FILE
@@ -224,9 +224,9 @@ jobs:
       id: tag
       if: steps.compile.outputs.status == 'success' && env.UPLOAD_RELEASE == 'true' && !cancelled()
       env:
-        SELECTED_DEVICE: ${{ github.event.inputs.device }}
+        SELECTED_DEVICE: ${{ github.event.inputs.device || 'rk3399_emb-3531' }}
       run: |
-        DEVICE_TAG="${SELECTED_DEVICE:-all}"
+        DEVICE_TAG="${SELECTED_DEVICE}"
         echo "release_tag=$(date +"%Y.%m.%d-%H.%M")-${{ matrix.ARCHITECTURE }}-${DEVICE_TAG}" >> ${GITHUB_OUTPUT}
         touch release.txt
         echo "
